@@ -14058,7 +14058,67 @@ window.addEventListener('appinstalled', () => {
   showToast('✅ تم تثبيت التطبيق بنجاح على جهازك!', 'success');
 });
 
+// إظهار زر التثبيت العائم أسفل الصفحة عند توفر PWA
+let deferredPrompt;
 
+function createFloatingInstallButton() {
+  const btn = document.createElement('button');
+  btn.id = 'installPwaBtn';
+  btn.innerHTML = '<i class="fas fa-download"></i> تثبيت التطبيق';
+  btn.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    background: #0d6efd;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: bold;
+    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  `;
+  btn.addEventListener('mouseenter', () => {
+    btn.style.transform = 'translateX(-50%) translateY(-3px)';
+    btn.style.boxShadow = '0 10px 25px rgba(13, 110, 253, 0.5)';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.transform = 'translateX(-50%)';
+    btn.style.boxShadow = '0 6px 20px rgba(13, 110, 253, 0.4)';
+  });
+  btn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      if (result.outcome === 'accepted') {
+        showToast('✅ تم تثبيت التطبيق بنجاح!', 'success');
+      } else {
+        showToast('❌ تم إلغاء التثبيت', 'error');
+      }
+      deferredPrompt = null;
+      document.getElementById('installPwaBtn')?.remove();
+    }
+  });
+  return btn;
+}
+
+function showFloatingInstallButton() {
+  if (document.getElementById('installPwaBtn')) return; // موجود مسبقًا
+  document.body.appendChild(createFloatingInstallButton());
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showFloatingInstallButton();
+});
     </script>
 </body>
 </html>
