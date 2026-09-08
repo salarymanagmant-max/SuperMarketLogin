@@ -13974,6 +13974,7 @@ function generateUserId() {
 
 
 // تسجيل Service Worker لتثبيت التطبيق (PWA)
+// تسجيل Service Worker لتثبيت التطبيق (PWA)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js')
     .then(registration => {
@@ -14000,34 +14001,55 @@ if ('serviceWorker' in navigator) {
 
 // إظهار زر التثبيت عند توفر PWA
 let deferredPrompt;
+
+function createInstallButton() {
+  const installBtn = document.createElement('button');
+  installBtn.className = 'nav-btn';
+  installBtn.style.background = 'rgba(46, 204, 113, 0.3)';
+  installBtn.style.border = '1px solid rgba(46, 204, 113, 0.3)';
+  installBtn.innerHTML = '<i class="fas fa-download"></i> تثبيت التطبيق';
+  installBtn.id = 'installPwaBtn';
+  installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      if (result.outcome === 'accepted') {
+        showToast('✅ تم تثبيت التطبيق بنجاح!', 'success');
+      } else {
+        showToast('❌ تم إلغاء التثبيت', 'error');
+      }
+      deferredPrompt = null;
+      document.getElementById('installPwaBtn')?.remove();
+    }
+  });
+  return installBtn;
+}
+
+// تحاول إضافة الزر فورًا، وإن لم يوجد navActions بعد، تراقب الصفحة حتى يظهر
+function addInstallButtonWhenReady() {
+  if (document.getElementById('installPwaBtn')) return; // موجود مسبقًا
+
+  const navActions = document.getElementById('navActions');
+  if (navActions) {
+    navActions.appendChild(createInstallButton());
+    return;
+  }
+
+  // navActions غير موجود بعد (مثلاً ما زالت شاشة الدخول ظاهرة) - راقب حتى يُضاف للصفحة
+  const observer = new MutationObserver(() => {
+    const target = document.getElementById('navActions');
+    if (target && !document.getElementById('installPwaBtn')) {
+      target.appendChild(createInstallButton());
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-
-  // إضافة زر التثبيت في شريط التنقل
-  const navActions = document.getElementById('navActions');
-  if (navActions) {
-    const installBtn = document.createElement('button');
-    installBtn.className = 'nav-btn';
-    installBtn.style.background = 'rgba(46, 204, 113, 0.3)';
-    installBtn.style.border = '1px solid rgba(46, 204, 113, 0.3)';
-    installBtn.innerHTML = '<i class="fas fa-download"></i> تثبيت التطبيق';
-    installBtn.id = 'installPwaBtn';
-    installBtn.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const result = await deferredPrompt.userChoice;
-        if (result.outcome === 'accepted') {
-          showToast('✅ تم تثبيت التطبيق بنجاح!', 'success');
-        } else {
-          showToast('❌ تم إلغاء التثبيت', 'error');
-        }
-        deferredPrompt = null;
-        document.getElementById('installPwaBtn')?.remove();
-      }
-    });
-    navActions.appendChild(installBtn);
-  }
+  addInstallButtonWhenReady();
 });
 
 // إخفاء زر التثبيت بعد التثبيت
